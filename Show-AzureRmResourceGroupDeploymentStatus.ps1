@@ -52,7 +52,7 @@ function GetOperations($deployment) {
             "Error"             = $_.Properties.StatusMessage.Error;
         }
     } `
-        | Sort-Object -Property StartTime # TODO sort by start, then type, then name
+        | Sort-Object -Property StartTime, ResourceType, ResourceName, Id
 }
 function DumpOperations($operations) {
     # $tableFormat = @{Expression = {$_.Id}; Label = "ID"}, `
