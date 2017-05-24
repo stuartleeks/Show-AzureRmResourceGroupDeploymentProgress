@@ -20,3 +20,13 @@ A little script designed to make it easier to track the progress of a large depl
  ```powershell
     ./Show-AzureRmResourceGroupDeploymentStatus.ps1 -ResourceGroupName MyResourceGroup -DeploymentName MyDeployment
  ```
+
+## TODO
+
+My notes on things to do:
+
+ * Look at the sorting as line items seem to jump around occasionally :-(
+ * Perform all of the querying before outputting. For single deployments this isn't an issue, but when there are nested deployments there's a lag while retrieving the nested deployment status before it is output
+
+
+
