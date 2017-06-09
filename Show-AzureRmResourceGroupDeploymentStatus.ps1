@@ -79,45 +79,55 @@ if ($DeploymentName -eq "") {
     $DeploymentName = $deployment.DeploymentName
 }
 
-
-function DumpDeploymentOperations(
-    $deploymentNameToDump, 
-    $clearHost = $false,
-    $exitIfNotRunning = $false
-) {
+function GetDeployments($deploymentName) {
     $deployment = Get-AzureRmResourceGroupDeployment `
         -ResourceGroupName $ResourceGroupName `
-        -Name $deploymentNameToDump `
+        -Name $deploymentName `
         -ErrorAction SilentlyContinue
 
     if ($deployment -eq $null) {
-        return
+        return $null
     }
 
     $operations = GetOperations $deployment
-    if ($clearHost) {
-        Clear-Host
-    }
-    Write-Host "Deployment: $deploymentNameToDump ($($deployment.ProvisioningState))"
-    DumpOperations $operations
 
-    # Dump nested deployments
-    $operations `
+    $deploymentSummary = [PSCustomObject]@{Deployment = $deployment; Operations = $operations};
+    $deployments = @($deploymentSummary)
+
+    $nestedNames = $operations `
         | Where-Object { $_.ResourceType -eq "Microsoft.Resources/deployments" } `
-        | Select-Object -ExpandProperty ResourceName `
-        | ForEach-Object {
-        Write-Host 
-        DumpDeploymentOperations $_
+        | Select-Object -ExpandProperty ResourceName 
+    foreach ($nestedName in $nestedNames) {
+        $nestedDeployments = GetDeployments $nestedName
+        if ($nestedDeployments -ne $null){
+            $deployments = $deployments + $nestedDeployments
+        }
     }
 
-    if ($exitIfNotRunning -and ($deployment.ProvisioningState -ne "Running")) {
-        exit
-    }
+    return $deployments
 }
 
 
 do {
-    DumpDeploymentOperations  -deploymentNameToDump $DeploymentName -clearHost $true -exitIfNotRunning $true
+    $deployments = GetDeployments $DeploymentName
+
+    if ($deployments -eq $null) {
+        Write-Host "No deployments"
+        exit
+    }
+    Clear-Host
+    foreach ($summary in $deployments) {
+        $deployment = $summary.Deployment
+        $operations = $summary.Operations
+        Write-Host "Deployment: $($deployment.DeploymentName) ($($deployment.ProvisioningState))"
+        DumpOperations $operations
+    }
+
+    if ($deployments[0].Deployment.ProvisioningState -ne "Running") {
+        Write-Host "Deployment finished"
+        exit
+    }
+
     Start-Sleep -Seconds 10 # TODO - set this to a sensible time!
 } while ( $true) 
 
