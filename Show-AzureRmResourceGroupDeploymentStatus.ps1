@@ -66,7 +66,19 @@ function DumpOperations($operations) {
     @{Expression = {$_.StartTime}; Label = "StartTime"; width = 20}, `
     @{Expression = {$_.Duration}; Label = "Duration"; width = 20}
 
-    $operations | Format-Table  $tableFormat
+    $text = $operations | Format-Table  $tableFormat | Out-String
+    $text.Split("`r") | ForEach-Object {
+        $line = $_.Trim("`n")
+        if ($line.StartsWith("Succeeded")){
+            Write-Host -ForegroundColor DarkGray $line
+        } elseif ($line.StartsWith("Running")){
+            Write-Host -ForegroundColor Green $line
+        } elseif ($line.StartsWith("Failed")){
+            Write-Host -ForegroundColor Red $line
+        } else {
+            Write-Host $line
+        }
+    }
 }
 
 
@@ -99,7 +111,7 @@ function GetDeployments($deploymentName) {
         | Select-Object -ExpandProperty ResourceName 
     foreach ($nestedName in $nestedNames) {
         $nestedDeployments = GetDeployments $nestedName
-        if ($nestedDeployments -ne $null){
+        if ($nestedDeployments -ne $null) {
             $deployments = $deployments + $nestedDeployments
         }
     }
